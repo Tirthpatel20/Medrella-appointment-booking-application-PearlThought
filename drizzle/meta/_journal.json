@@ -15,6 +15,13 @@
       "when": 1793103308585,
       "tag": "0001_violet_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793106511183,
+      "tag": "0002_plain_fat_cobra",
+      "breakpoints": true
     }
   ]
 }

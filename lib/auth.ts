@@ -12,5 +12,16 @@ export const auth = betterAuth({
         enabled: true,
     },
 
+    user: {
+        additionalFields: {
+            role: {
+                type: "string",
+                required: false,
+                defaultValue: "patient",
+                input: true,
+            },
+        },
+    },
+
     plugins: [nextCookies()],
 });
