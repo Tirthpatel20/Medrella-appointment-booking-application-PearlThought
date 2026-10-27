@@ -19,9 +19,9 @@ const doctorProfileSchema = z.object({
 });
 
 export async function saveDoctorProfile(
-    _previousState: { error?: string },
+    _previousState: { error?: string; success?: boolean },
     formData: FormData,
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; success?: boolean }> {
     const session = await auth.api.getSession({
         headers: await headers(),
     });
@@ -73,6 +73,7 @@ export async function saveDoctorProfile(
                     experienceYears: data.experienceYears,
                     consultationFee: data.consultationFee.toFixed(2),
                     bio: data.bio ?? null,
+                    updatedAt: new Date(),
                 },
             });
     } catch {
@@ -82,7 +83,8 @@ export async function saveDoctorProfile(
     }
 
     revalidatePath("/doctor/dashboard");
+    revalidatePath("/doctor/onboarding");
     revalidatePath("/");
 
-    redirect("/doctor/dashboard");
+    return { success: true };
 }

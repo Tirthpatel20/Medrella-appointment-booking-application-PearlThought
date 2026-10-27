@@ -57,6 +57,7 @@ export default function Navbar() {
               {session.user.role === "doctor" ? (
                 <Link
                   href="/doctor/dashboard"
+                  prefetch={false}
                   className="rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800"
                 >
                   Dashboard

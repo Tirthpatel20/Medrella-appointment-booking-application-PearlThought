@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { eq } from "drizzle-orm";
 
 import { auth } from "@/lib/auth";
@@ -45,11 +46,19 @@ async function DoctorDashboardContent() {
                 </p>
 
                 <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="text-xl font-semibold text-slate-900">
-                        Professional Profile
-                    </h2>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <h2 className="text-xl font-semibold text-slate-900">
+                            Professional Profile
+                        </h2>
+                        <Link
+                            href="/doctor/onboarding?edit=true"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
+                        >
+                            <span>✏️</span> Edit your details
+                        </Link>
+                    </div>
 
-                    <div className="mt-4 space-y-3 text-slate-700">
+                    <div className="mt-5 space-y-3 text-slate-700">
                         <p>
                             <strong>Specialization:</strong>{" "}
                             {doctor.specialization}
@@ -59,6 +68,10 @@ async function DoctorDashboardContent() {
                             {doctor.qualifications || "Not provided"}
                         </p>
                         <p>
+                            <strong>Medical License:</strong>{" "}
+                            {doctor.licenseNumber || "Not provided"}
+                        </p>
+                        <p>
                             <strong>Experience:</strong>{" "}
                             {doctor.experienceYears ?? 0} years
                         </p>
@@ -66,12 +79,28 @@ async function DoctorDashboardContent() {
                             <strong>Consultation Fee:</strong>{" "}
                             ₹{doctor.consultationFee}
                         </p>
-                        <p>
+                        {doctor.bio && (
+                            <p>
+                                <strong>Bio:</strong> {doctor.bio}
+                            </p>
+                        )}
+                        <p className="flex items-center gap-2">
                             <strong>Verification Status:</strong>{" "}
-                            {doctor.verificationStatus}
+                            <span
+                                className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${
+                                    doctor.verificationStatus === "APPROVED"
+                                        ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
+                                        : doctor.verificationStatus === "REJECTED"
+                                        ? "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20"
+                                        : "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"
+                                }`}
+                            >
+                                {doctor.verificationStatus}
+                            </span>
                         </p>
                     </div>
                 </section>
+
                 <AvailabilityForm />
                 <AvailabilityList doctorId={doctor.id} />
             </div>
