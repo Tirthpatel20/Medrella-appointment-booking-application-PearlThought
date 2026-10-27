@@ -1,6 +1,11 @@
 
 import Link from "next/link";
+import { Suspense } from "react";
+import { headers } from "next/headers";
+
 import Navbar from "@/components/navbar";
+import PatientDashboardContent from "@/components/patient-dashboard-content";
+import { auth } from "@/lib/auth";
 
 const features = [
   {
@@ -23,7 +28,7 @@ const features = [
   },
 ];
 
-export default function Home() {
+function PublicLanding() {
   return (
     <main className="min-h-screen bg-[#f8fbfa] text-slate-900">
       <Navbar />
@@ -57,6 +62,7 @@ export default function Home() {
               >
                 Get started <span aria-hidden="true">→</span>
               </Link>
+
               <Link
                 href="/auth"
                 className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:border-teal-300 hover:bg-teal-50"
@@ -67,10 +73,12 @@ export default function Home() {
 
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-slate-200 pt-6 text-sm text-slate-600">
               <span className="flex items-center gap-2">
-                <span className="text-teal-700">✓</span> Patient and doctor accounts
+                <span className="text-teal-700">✓</span>
+                Patient and doctor accounts
               </span>
               <span className="flex items-center gap-2">
-                <span className="text-teal-700">✓</span> Doctor profile management
+                <span className="text-teal-700">✓</span>
+                Doctor profile management
               </span>
             </div>
           </div>
@@ -88,6 +96,7 @@ export default function Home() {
                     Care that fits your life.
                   </h2>
                 </div>
+
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-2xl">
                   ✚
                 </div>
@@ -132,13 +141,18 @@ export default function Home() {
 
             <div className="absolute -bottom-5 -left-4 rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-lg sm:-left-8">
               <p className="text-xs text-slate-500">Built for</p>
-              <p className="mt-1 font-semibold">Patients & professionals</p>
+              <p className="mt-1 font-semibold">
+                Patients &amp; professionals
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="how-it-works" className="scroll-mt-24 border-y border-slate-200 bg-white">
+      <section
+        id="how-it-works"
+        className="scroll-mt-24 border-y border-slate-200 bg-white"
+      >
         <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal-700">
@@ -189,6 +203,7 @@ export default function Home() {
                 through your own doctor dashboard.
               </p>
             </div>
+
             <Link
               href="/auth"
               className="shrink-0 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-slate-900 transition hover:bg-teal-50"
@@ -209,5 +224,46 @@ export default function Home() {
         </div>
       </footer>
     </main>
+  );
+}
+
+async function HomeContent() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (session?.user.role === "patient") {
+    return (
+      <>
+        <Navbar />
+        <PatientDashboardContent
+          userId={session.user.id}
+          name={session.user.name}
+        />
+      </>
+    );
+  }
+
+  // Keep the public homepage for logged-out visitors and doctors.
+  return <PublicLanding />;
+}
+
+function HomeLoading() {
+  return (
+    <main className="min-h-screen bg-[#f8fbfa] px-5 py-12">
+      <div className="mx-auto max-w-6xl animate-pulse">
+        <div className="h-9 w-72 rounded bg-slate-200" />
+        <div className="mt-4 h-4 w-96 max-w-full rounded bg-slate-200" />
+        <div className="mt-10 h-56 rounded-2xl bg-white" />
+      </div>
+    </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<HomeLoading />}>
+      <HomeContent />
+    </Suspense>
   );
 }
