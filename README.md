@@ -106,8 +106,6 @@ Create a `.env.local` file in the project root:
 DATABASE_URL=your_postgresql_connection_string
 ```
 
-Use your own database connection string. Never commit `.env.local` or expose database credentials publicly.
-
 Configure any additional environment variables required by your Better Auth setup before running the application.
 
 ### 4. Apply database migrations
@@ -117,8 +115,6 @@ Run the project's configured Drizzle migration command. For example, if your `pa
 ```bash
 npm run db:migrate
 ```
-
-If your migration script has a different name, use the command configured in your project.
 
 ### 5. Start the development server
 
@@ -182,7 +178,6 @@ At a high level:
 4. Apply database migrations to the intended hosted database.
 5. Deploy and test authentication, doctor discovery, booking, and cancellation flows.
 
-Never use the development seed script against the production database.
 
 ## Current Focus
 
@@ -193,7 +188,3 @@ The project is being developed incrementally, with emphasis on:
 - Database integrity under concurrent booking requests.
 - Role-based authorization.
 - End-to-end testing with realistic test data.
-
-## License
-
-No license has been specified yet. Add a license file if you intend to permit others to use, modify, or distribute the project.
