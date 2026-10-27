@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { authClient } from "@/lib/auth-client";
 
 export default function Navbar() {
     const { data: session, isPending } = authClient.useSession();
     const [loggingOut, setLoggingOut] = useState(false);
+
+    const router = useRouter();
 
     async function handleLogout() {
         setLoggingOut(true);
@@ -19,7 +23,8 @@ export default function Navbar() {
                 return;
             }
 
-            window.location.href = "/";
+            router.replace("/");
+            router.refresh();
         } catch {
             setLoggingOut(false);
         }
