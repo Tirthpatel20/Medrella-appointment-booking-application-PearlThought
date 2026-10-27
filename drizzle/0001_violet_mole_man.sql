@@ -1,0 +1,1 @@
+ALTER TABLE "doctor_profiles" RENAME COLUMN "verificationStatus" TO "verification_status";
