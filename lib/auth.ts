@@ -23,5 +23,10 @@ export const auth = betterAuth({
         },
     },
 
+    trustedOrigins: [
+        "http://localhost:3000",
+        "https://medrella-appointment-booking-applic-alpha.vercel.app",
+    ],
+
     plugins: [nextCookies()],
 });
