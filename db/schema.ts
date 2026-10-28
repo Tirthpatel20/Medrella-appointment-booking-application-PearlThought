@@ -1,13 +1,15 @@
 import {
+    date,
+    index,
+    integer,
+    numeric,
     pgEnum,
     pgTable,
     text,
     timestamp,
-    uuid,
-    integer,
-    numeric,
-    index,
+    unique,
     uniqueIndex,
+    uuid,
 } from "drizzle-orm/pg-core";
 
 import { user } from "./auth-schema";
@@ -27,6 +29,20 @@ export const appointmentStatus = pgEnum("appointment_status", [
     "BOOKED",
     "CONFIRMED",
     "CANCELLED",
+    "COMPLETED",
+    "QUEUED",
+    "CALLED",
+]);
+
+export const appointmentMode = pgEnum("appointment_mode", [
+    "FIXED",
+    "OPD",
+    "WALKIN",
+]);
+
+export const opdSessionStatus = pgEnum("opd_session_status", [
+    "SCHEDULED",
+    "OPEN",
     "COMPLETED",
 ]);
 
@@ -90,6 +106,32 @@ export const availabilitySlots = pgTable(
     ],
 );
 
+export const opdSessions = pgTable(
+    "opd_sessions",
+    {
+        id: uuid("id").defaultRandom().primaryKey(),
+        doctorId: uuid("doctor_id")
+            .notNull()
+            .references(() => doctorProfiles.id, { onDelete: "restrict" }),
+        sessionDate: date("session_date").notNull(),
+        status: opdSessionStatus("status").default("SCHEDULED").notNull(),
+        notes: text("notes"),
+        openedAt: timestamp("opened_at", { withTimezone: true }),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    },
+    (table) => [
+        unique("opd_sessions_doctor_date_unique").on(
+            table.doctorId,
+            table.sessionDate,
+        ),
+        index("opd_sessions_doctor_date_idx").on(
+            table.doctorId,
+            table.sessionDate,
+        ),
+    ],
+);
+
 export const appointments = pgTable(
     "appointments",
     {
@@ -101,8 +143,12 @@ export const appointments = pgTable(
             .notNull()
             .references(() => doctorProfiles.id, { onDelete: "restrict" }),
         slotId: uuid("slot_id")
-            .notNull()
             .references(() => availabilitySlots.id, { onDelete: "restrict" }),
+        mode: appointmentMode("mode").default("FIXED").notNull(),
+        sessionId: uuid("session_id")
+            .references(() => opdSessions.id, { onDelete: "restrict" }),
+        queuePosition: integer("queue_position"),
+        calledAt: timestamp("called_at", { withTimezone: true }),
         status: appointmentStatus().default("BOOKED").notNull(),
         reason: text("reason"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -112,14 +158,16 @@ export const appointments = pgTable(
         index("appointments_patient_idx").on(table.patientId),
         index("appointments_doctor_idx").on(table.doctorId),
         index("appointments_slot_idx").on(table.slotId),
+        index("appointments_session_idx").on(table.sessionId),
         uniqueIndex("one_active_booking_per_slot")
             .on(table.slotId)
             .where(
-                // This index is only for active bookings.
-                // Cancelled and completed appointments remain as history.
-                // SQL literal is intentionally static.
-                // Drizzle's SQL helper is imported below.
                 sql`${table.status} IN ('BOOKED', 'CONFIRMED')`,
+            ),
+        uniqueIndex("one_active_queue_entry_per_session")
+            .on(table.sessionId, table.patientId)
+            .where(
+                sql`${table.status} IN ('QUEUED', 'CALLED')`,
             ),
     ],
 );

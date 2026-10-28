@@ -135,7 +135,7 @@ export async function completeAppointment(appointmentId: string) {
         and(
           eq(appointments.id, appointmentId),
           eq(appointments.doctorId, doctor.id),
-          inArray(appointments.status, ["BOOKED", "CONFIRMED"])
+          inArray(appointments.status, ["BOOKED", "CONFIRMED", "CALLED", "QUEUED"])
         )
       )
       .returning({ id: appointments.id });
