@@ -5,6 +5,7 @@ import {
     appointments,
     availabilitySlots,
     doctorProfiles,
+    opdSessions,
     patientProfiles,
 } from "./schema";
 import { auth } from "../lib/auth";
@@ -65,13 +66,16 @@ type SeedDoctor = SeedUser & (typeof doctorData)[number];
 async function clearDummyData() {
     console.log("🧹 Clearing existing test data...");
 
-    // 1. Delete appointments first (they reference patients, doctors, and slots)
+    // 1. Delete appointments first (they reference patients, doctors, slots, and sessions)
     await db.delete(appointments);
 
-    // 2. Delete availability slots (they reference doctor profiles)
+    // 2. Delete OPD sessions
+    await db.delete(opdSessions);
+
+    // 3. Delete availability slots (they reference doctor profiles)
     await db.delete(availabilitySlots);
 
-    // 3. Delete patient and doctor profiles
+    // 4. Delete patient and doctor profiles
     await db.delete(patientProfiles);
     await db.delete(doctorProfiles);
 
@@ -233,6 +237,75 @@ async function ensureAppointment(
             doctorId,
             slotId,
             status,
+            reason,
+        })
+        .returning();
+
+    return appointment;
+}
+
+async function ensureOpdSession(
+    doctorId: string,
+    sessionDate: string,
+    status: "SCHEDULED" | "OPEN" | "COMPLETED",
+    openedAt?: Date,
+) {
+    const [existing] = await db
+        .select()
+        .from(opdSessions)
+        .where(
+            and(
+                eq(opdSessions.doctorId, doctorId),
+                eq(opdSessions.sessionDate, sessionDate),
+            ),
+        )
+        .limit(1);
+
+    if (existing) {
+        await db
+            .update(opdSessions)
+            .set({ status, openedAt, updatedAt: new Date() })
+            .where(eq(opdSessions.id, existing.id));
+        return existing;
+    }
+
+    const [session] = await db
+        .insert(opdSessions)
+        .values({ doctorId, sessionDate, status, openedAt })
+        .returning();
+
+    return session;
+}
+
+async function ensureOpdAppointment({
+    patientId,
+    doctorId,
+    sessionId,
+    mode,
+    status,
+    queuePosition,
+    calledAt,
+    reason,
+}: {
+    patientId: string;
+    doctorId: string;
+    sessionId: string;
+    mode: "OPD" | "WALKIN";
+    status: "QUEUED" | "CALLED" | "COMPLETED" | "CANCELLED";
+    queuePosition: number;
+    calledAt?: Date;
+    reason: string;
+}) {
+    const [appointment] = await db
+        .insert(appointments)
+        .values({
+            patientId,
+            doctorId,
+            sessionId,
+            mode,
+            status,
+            queuePosition,
+            calledAt,
             reason,
         })
         .returning();
@@ -412,6 +485,87 @@ async function main() {
         cancelledSlot.id,
         "CANCELLED",
         "Patient cancelled this consultation",
+    );
+
+    // ==========================================
+    // SEED TODAY'S OPD CLINIC SESSIONS & QUEUES
+    // ==========================================
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    // 1. Live OPD Session for Dr. Kavita Rao (Cardiologist)
+    const cardioSession = await ensureOpdSession(
+        cardiologist.profile.id,
+        todayStr,
+        "OPEN",
+        new Date(Date.now() - 2 * 60 * 60 * 1000), // opened 2 hours ago
+    );
+
+    // Patient 1: Aarav (Completed consultation)
+    await ensureOpdAppointment({
+        patientId: aarav.patientId,
+        doctorId: cardiologist.profile.id,
+        sessionId: cardioSession.id,
+        mode: "OPD",
+        status: "COMPLETED",
+        queuePosition: 1,
+        calledAt: new Date(Date.now() - 60 * 60 * 1000),
+        reason: "Chest tightness checkup",
+    });
+
+    // Patient 2: Ananya (Currently CALLED into consultation room)
+    await ensureOpdAppointment({
+        patientId: ananya.patientId,
+        doctorId: cardiologist.profile.id,
+        sessionId: cardioSession.id,
+        mode: "OPD",
+        status: "CALLED",
+        queuePosition: 2,
+        calledAt: new Date(Date.now() - 5 * 60 * 1000),
+        reason: "Blood pressure follow-up",
+    });
+
+    // Patient 3: Rohan (Waiting in QUEUE)
+    await ensureOpdAppointment({
+        patientId: rohan.patientId,
+        doctorId: cardiologist.profile.id,
+        sessionId: cardioSession.id,
+        mode: "OPD",
+        status: "QUEUED",
+        queuePosition: 3,
+        reason: "General preventive heart check",
+    });
+
+    // 2. Walk-in entry for Dr. Arjun Singh (Dermatologist)
+    const dermaSession = await ensureOpdSession(
+        dermatologist.profile.id,
+        todayStr,
+        "OPEN",
+        new Date(Date.now() - 1 * 60 * 60 * 1000),
+    );
+
+    await ensureOpdAppointment({
+        patientId: priya.patientId,
+        doctorId: dermatologist.profile.id,
+        sessionId: dermaSession.id,
+        mode: "WALKIN",
+        status: "QUEUED",
+        queuePosition: 1,
+        reason: "Acute skin rash and allergy",
+    });
+
+    // 3. Today's fixed-time appointment for Dr. Kavita Rao
+    const todayFixedSlot = await ensureSlot(
+        cardiologist.profile.id,
+        new Date(Date.now() + 2 * 60 * 60 * 1000),
+        new Date(Date.now() + 2.5 * 60 * 60 * 1000),
+    );
+
+    await ensureAppointment(
+        priya.patientId,
+        cardiologist.profile.id,
+        todayFixedSlot.id,
+        "CONFIRMED",
+        "Scheduled ECG review",
     );
 
     // Leave these slots unbooked for testing the booking flow.

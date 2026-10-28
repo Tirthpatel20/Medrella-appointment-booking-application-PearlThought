@@ -51,7 +51,7 @@ export async function cancelAppointment(appointmentId: string) {
                 and(
                     eq(appointments.id, appointmentId),
                     eq(appointments.patientId, patient.id),
-                    inArray(appointments.status, ["BOOKED", "CONFIRMED"])
+                    inArray(appointments.status, ["BOOKED", "CONFIRMED", "QUEUED"])
                 )
             )
             .returning({ id: appointments.id });
